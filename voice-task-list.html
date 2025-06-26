@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Notes to Task List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .voice-controls {
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .voice-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(238, 90, 82, 0.3);
+        }
+
+        .voice-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(238, 90, 82, 0.4);
+        }
+
+        .voice-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .voice-btn.listening {
+            background: linear-gradient(135deg, #51cf66, #40c057);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 5px 15px rgba(64, 192, 87, 0.3); }
+            50% { box-shadow: 0 5px 25px rgba(64, 192, 87, 0.6); }
+            100% { box-shadow: 0 5px 15px rgba(64, 192, 87, 0.3); }
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 1rem;
+            color: #666;
+            min-height: 25px;
+        }
+
+        .status.listening {
+            color: #40c057;
+            font-weight: 600;
+        }
+
+        .status.error {
+            color: #ff6b6b;
+        }
+
+        .task-list {
+            padding: 30px;
+            min-height: 300px;
+        }
+
+        .task-list h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .task-item {
+            background: white;
+            border: 2px solid #f1f3f5;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .task-item:hover {
+            border-color: #4facfe;
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.1);
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-right: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .task-checkbox.checked {
+            background: linear-gradient(135deg, #51cf66, #40c057);
+            border-color: #40c057;
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 2px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .task-text {
+            flex-grow: 1;
+            font-size: 1.1rem;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+
+        .task-text.completed {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .task-delete {
+            background: #ff6b6b;
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .task-delete:hover {
+            background: #ee5a52;
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            font-size: 1.1rem;
+            padding: 50px 20px;
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .browser-support {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            margin: 20px 30px;
+            border-radius: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Voice Task List</h1>
+            <p>Speak your tasks and watch them appear like magic!</p>
+        </div>
+
+        <div class="browser-support" id="browserSupport">
+            <strong>Browser Not Supported:</strong> Your browser doesn't support the Web Speech API. Please use Chrome, Edge, or Safari for the best experience.
+        </div>
+
+        <div class="voice-controls">
+            <button class="voice-btn" id="voiceBtn">
+                🎤 Start Listening
+            </button>
+            <div class="status" id="status">Click the button and speak your task</div>
+        </div>
+
+        <div class="task-list">
+            <h2>📝 Your Tasks</h2>
+            <div id="taskContainer">
+                <div class="empty-state">
+                    <div class="icon">📋</div>
+                    <p>No tasks yet. Start by adding your first voice note!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class VoiceTaskList {
+            constructor() {
+                this.tasks = [];
+                this.recognition = null;
+                this.isListening = false;
+                
+                this.voiceBtn = document.getElementById('voiceBtn');
+                this.status = document.getElementById('status');
+                this.taskContainer = document.getElementById('taskContainer');
+                
+                this.initSpeechRecognition();
+                this.bindEvents();
+                this.renderTasks();
+            }
+
+            initSpeechRecognition() {
+                // Check for browser support
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    document.getElementById('browserSupport').style.display = 'block';
+                    this.voiceBtn.disabled = true;
+                    return;
+                }
+
+                // Initialize speech recognition
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                this.recognition = new SpeechRecognition();
+                
+                this.recognition.continuous = false;
+                this.recognition.interimResults = false;
+                this.recognition.lang = 'en-US';
+
+                this.recognition.onstart = () => {
+                    this.isListening = true;
+                    this.voiceBtn.textContent = '🛑 Stop Listening';
+                    this.voiceBtn.classList.add('listening');
+                    this.status.textContent = 'Listening... Speak your task now';
+                    this.status.classList.add('listening');
+                };
+
+                this.recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    this.addTask(transcript);
+                    this.status.textContent = `Added: "${transcript}"`;
+                    this.status.classList.remove('listening', 'error');
+                };
+
+                this.recognition.onerror = (event) => {
+                    this.status.textContent = `Error: ${event.error}. Please try again.`;
+                    this.status.classList.add('error');
+                    this.status.classList.remove('listening');
+                    this.resetButton();
+                };
+
+                this.recognition.onend = () => {
+                    this.resetButton();
+                };
+            }
+
+            bindEvents() {
+                this.voiceBtn.addEventListener('click', () => {
+                    if (this.isListening) {
+                        this.stopListening();
+                    } else {
+                        this.startListening();
+                    }
+                });
+            }
+
+            startListening() {
+                if (this.recognition) {
+                    this.recognition.start();
+                }
+            }
+
+            stopListening() {
+                if (this.recognition) {
+                    this.recognition.stop();
+                }
+            }
+
+            resetButton() {
+                this.isListening = false;
+                this.voiceBtn.textContent = '🎤 Start Listening';
+                this.voiceBtn.classList.remove('listening');
+                this.status.classList.remove('listening');
+            }
+
+            addTask(text) {
+                const task = {
+                    id: Date.now(),
+                    text: text.trim(),
+                    completed: false,
+                    timestamp: new Date().toLocaleString()
+                };
+                
+                this.tasks.unshift(task);
+                this.renderTasks();
+            }
+
+            toggleTask(id) {
+                const task = this.tasks.find(t => t.id === id);
+                if (task) {
+                    task.completed = !task.completed;
+                    this.renderTasks();
+                }
+            }
+
+            deleteTask(id) {
+                this.tasks = this.tasks.filter(t => t.id !== id);
+                this.renderTasks();
+            }
+
+            renderTasks() {
+                if (this.tasks.length === 0) {
+                    this.taskContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">📋</div>
+                            <p>No tasks yet. Start by adding your first voice note!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                this.taskContainer.innerHTML = this.tasks.map(task => `
+                    <div class="task-item">
+                        <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
+                             onclick="app.toggleTask(${task.id})"></div>
+                        <div class="task-text ${task.completed ? 'completed' : ''}">${task.text}</div>
+                        <button class="task-delete" onclick="app.deleteTask(${task.id})" title="Delete task">
+                            ×
+                        </button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Initialize the app
+        const app = new VoiceTaskList();
+
+        // Add some demo functionality
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' && e.target === document.body) {
+                e.preventDefault();
+                if (!app.isListening) {
+                    app.startListening();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
